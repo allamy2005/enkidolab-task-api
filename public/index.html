@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EnkidoLab | إدارة المهام</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 40px 16px;
+      background: #f3f6fb; color: #172033;
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 760px; margin: auto; padding: 28px;
+      background: white; border: 1px solid #e4e9f2;
+      border-radius: 20px; box-shadow: 0 16px 45px #17203312;
+    }
+    header { margin-bottom: 24px; }
+    header span { color: #2878e8; font-weight: bold; }
+    h1 { margin: 10px 0 6px; }
+    header p { color: #667085; margin: 0; }
+    form {
+      display: grid; gap: 12px; padding: 18px;
+      background: #f8faff; border-radius: 14px;
+    }
+    input, textarea, button {
+      font: inherit; padding: 12px; border-radius: 9px;
+    }
+    input, textarea { border: 1px solid #d7deea; }
+    textarea { resize: vertical; min-height: 80px; }
+    button {
+      border: 0; background: #2878e8; color: white;
+      font-weight: bold; cursor: pointer;
+    }
+    button:hover { background: #1763cb; }
+    .list-heading {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-top: 26px;
+    }
+    #count, #status { color: #667085; }
+    ul { list-style: none; padding: 0; display: grid; gap: 10px; }
+    li {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px; border: 1px solid #e4e9f2; border-radius: 12px;
+    }
+    li input { width: 18px; height: 18px; }
+    .task-info { flex: 1; }
+    .task-info h3 { margin: 0 0 5px; }
+    .task-info p { margin: 0; color: #667085; }
+    .done h3 { text-decoration: line-through; color: #8992a3; }
+    .delete { background: #e5484d; padding: 9px 12px; }
+    @media (max-width: 520px) {
+      main { padding: 18px; }
+      li { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span>ENKIDOLAB · TASKS</span>
+      <h1>إدارة المهام</h1>
+      <p>واجهة تتصل بقاعدة البيانات عن طريق الـAPI.</p>
+    </header>
+
+    <form id="task-form">
+      <input name="title" maxlength="200" placeholder="عنوان المهمة" required>
+      <textarea name="description" placeholder="وصف المهمة (اختياري)"></textarea>
+      <button type="submit">إضافة مهمة</button>
+    </form>
+
+    <div class="list-heading">
+      <h2>قائمة المهام</h2>
+      <span id="count"></span>
+    </div>
+    <p id="status">جاري تحميل المهام...</p>
+    <ul id="task-list"></ul>
+  </main>
+
+  <script>
+    const list = document.querySelector("#task-list");
+    const statusText = document.querySelector("#status");
+    const countText = document.querySelector("#count");
+    const form = document.querySelector("#task-form");
+
+    async function loadTasks() {
+      try {
+        const response = await fetch("/api/tasks");
+        if (!response.ok) throw new Error("تعذر جلب المهام");
+        const tasks = await response.json();
+        list.replaceChildren();
+        countText.textContent = `${tasks.length} مهمة`;
+
+        tasks.forEach(task => {
+          const item = document.createElement("li");
+          if (task.completed) item.classList.add("done");
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = task.completed;
+          checkbox.setAttribute("aria-label", "تغيير حالة المهمة");
+          checkbox.addEventListener("change", () => updateTask(task, checkbox.checked));
+
+          const info = document.createElement("div");
+          info.className = "task-info";
+          const title = document.createElement("h3");
+          title.textContent = task.title;
+          const description = document.createElement("p");
+          description.textContent = task.description || "بدون وصف";
+          info.append(title, description);
+
+          const remove = document.createElement("button");
+          remove.className = "delete";
+          remove.textContent = "حذف";
+          remove.addEventListener("click", () => deleteTask(task.id));
+
+          item.append(checkbox, info, remove);
+          list.append(item);
+        });
+
+        statusText.textContent = tasks.length ? "" : "ماكو مهام حالياً. أضف أول مهمة.";
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    }
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const data = new FormData(form);
+      try {
+        const response = await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: data.get("title"),
+            description: data.get("description")
+          })
+        });
+        if (!response.ok) throw new Error("ما انضافت المهمة");
+        form.reset();
+        await loadTasks();
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
+
+    async function updateTask(task, completed) {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...task, completed })
+      });
+      if (!response.ok) statusText.textContent = "ما تحدّثت المهمة";
+      await loadTasks();
+    }
+
+    async function deleteTask(id) {
+      const response = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        statusText.textContent = "ما انحذفت المهمة";
+        return;
+      }
+      await loadTasks();
+    }
+
+    loadTasks();
+  </script>
+</body>
+</html>
