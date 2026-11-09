@@ -6,93 +6,154 @@
   <title>EnkidoLab | إدارة المهام</title>
   <style>
     * { box-sizing: border-box; }
-    body {
-      margin: 0; min-height: 100vh; padding: 40px 16px;
-      background: #f3f6fb; color: #172033;
-      font-family: Arial, sans-serif;
-    }
-    main {
-      max-width: 760px; margin: auto; padding: 28px;
-      background: white; border: 1px solid #e4e9f2;
-      border-radius: 20px; box-shadow: 0 16px 45px #17203312;
-    }
+    body { margin: 0; min-height: 100vh; padding: 40px 16px; background: #f3f6fb; color: #172033; font-family: Arial, sans-serif; }
+    main { max-width: 760px; margin: auto; padding: 28px; background: white; border: 1px solid #e4e9f2; border-radius: 20px; box-shadow: 0 16px 45px #17203312; }
     header { margin-bottom: 24px; }
     header span { color: #2878e8; font-weight: bold; }
     h1 { margin: 10px 0 6px; }
-    header p { color: #667085; margin: 0; }
-    form {
-      display: grid; gap: 12px; padding: 18px;
-      background: #f8faff; border-radius: 14px;
-    }
-    input, textarea, button {
-      font: inherit; padding: 12px; border-radius: 9px;
-    }
+    header p, #status, #auth-message { color: #667085; }
+    form { display: grid; gap: 12px; padding: 18px; background: #f8faff; border-radius: 14px; }
+    input, textarea, button { font: inherit; padding: 12px; border-radius: 9px; }
     input, textarea { border: 1px solid #d7deea; }
     textarea { resize: vertical; min-height: 80px; }
-    button {
-      border: 0; background: #2878e8; color: white;
-      font-weight: bold; cursor: pointer;
-    }
+    button { border: 0; background: #2878e8; color: white; font-weight: bold; cursor: pointer; }
     button:hover { background: #1763cb; }
-    .list-heading {
-      display: flex; justify-content: space-between;
-      align-items: center; margin-top: 26px;
-    }
-    #count, #status { color: #667085; }
+    .secondary { color: #2878e8; background: transparent; }
+    .secondary:hover { background: #eaf2ff; }
+    .topline, .list-heading { display: flex; justify-content: space-between; align-items: center; }
+    .list-heading { margin-top: 26px; }
+    #count { color: #667085; }
     ul { list-style: none; padding: 0; display: grid; gap: 10px; }
-    li {
-      display: flex; align-items: center; gap: 12px;
-      padding: 14px; border: 1px solid #e4e9f2; border-radius: 12px;
-    }
+    li { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid #e4e9f2; border-radius: 12px; }
     li input { width: 18px; height: 18px; }
     .task-info { flex: 1; }
     .task-info h3 { margin: 0 0 5px; }
     .task-info p { margin: 0; color: #667085; }
     .done h3 { text-decoration: line-through; color: #8992a3; }
     .delete { background: #e5484d; padding: 9px 12px; }
-    @media (max-width: 520px) {
-      main { padding: 18px; }
-      li { flex-wrap: wrap; }
-    }
+    [hidden] { display: none !important; }
+    @media (max-width: 520px) { main { padding: 18px; } li { flex-wrap: wrap; } }
   </style>
 </head>
 <body>
   <main>
-    <header>
-      <span>ENKIDOLAB · TASKS</span>
-      <h1>إدارة المهام</h1>
-      <p>واجهة تتصل بقاعدة البيانات عن طريق الـAPI.</p>
-    </header>
+    <section id="auth-screen">
+      <header>
+        <span>ENKIDOLAB · TASKS</span>
+        <h1>إدارة المهام</h1>
+        <p>سجّل دخولك حتى تشوف مهامك الخاصة.</p>
+      </header>
+      <form id="auth-form">
+        <input name="username" placeholder="اسم المستخدم" minlength="3" maxlength="30" required>
+        <input name="password" type="password" placeholder="كلمة المرور" required>
+        <button id="auth-submit" type="submit">تسجيل الدخول</button>
+        <button id="auth-toggle" class="secondary" type="button">إنشاء حساب جديد</button>
+      </form>
+      <p id="auth-message" role="status"></p>
+    </section>
 
-    <form id="task-form">
-      <input name="title" maxlength="200" placeholder="عنوان المهمة" required>
-      <textarea name="description" placeholder="وصف المهمة (اختياري)"></textarea>
-      <button type="submit">إضافة مهمة</button>
-    </form>
+    <section id="task-screen" hidden>
+      <div class="topline">
+        <header>
+          <span>ENKIDOLAB · TASKS</span>
+          <h1>إدارة المهام</h1>
+          <p id="welcome"></p>
+        </header>
+        <button id="logout" class="secondary" type="button">تسجيل الخروج</button>
+      </div>
 
-    <div class="list-heading">
-      <h2>قائمة المهام</h2>
-      <span id="count"></span>
-    </div>
-    <p id="status">جاري تحميل المهام...</p>
-    <ul id="task-list"></ul>
+      <form id="task-form">
+        <input name="title" maxlength="200" placeholder="عنوان المهمة" required>
+        <textarea name="description" placeholder="وصف المهمة (اختياري)"></textarea>
+        <button type="submit">إضافة مهمة</button>
+      </form>
+
+      <div class="list-heading">
+        <h2>قائمة المهام</h2>
+        <span id="count"></span>
+      </div>
+      <p id="status">جاري تحميل المهام...</p>
+      <ul id="task-list"></ul>
+    </section>
   </main>
 
   <script>
+    const authScreen = document.querySelector("#auth-screen");
+    const taskScreen = document.querySelector("#task-screen");
+    const authForm = document.querySelector("#auth-form");
+    const authMessage = document.querySelector("#auth-message");
+    const authToggle = document.querySelector("#auth-toggle");
+    const authSubmit = document.querySelector("#auth-submit");
+    const passwordInput = authForm.elements.password;
+    const taskForm = document.querySelector("#task-form");
     const list = document.querySelector("#task-list");
     const statusText = document.querySelector("#status");
     const countText = document.querySelector("#count");
-    const form = document.querySelector("#task-form");
+    let registering = false;
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "صار خطأ، حاول مرة ثانية");
+      return data;
+    }
+
+    authToggle.addEventListener("click", () => {
+      registering = !registering;
+      authSubmit.textContent = registering ? "إنشاء الحساب" : "تسجيل الدخول";
+      authToggle.textContent = registering ? "عندي حساب، تسجيل الدخول" : "إنشاء حساب جديد";
+      passwordInput.minLength = registering ? 10 : 1;
+      passwordInput.placeholder = registering ? "كلمة المرور (10 أحرف على الأقل)" : "كلمة المرور";
+      authMessage.textContent = "";
+    });
+
+    authForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      authMessage.textContent = "جاري التحقق...";
+      const data = new FormData(authForm);
+      try {
+        const endpoint = registering ? "/api/auth/register" : "/api/auth/login";
+        const result = await request(endpoint, {
+          method: "POST",
+          body: JSON.stringify({
+            username: data.get("username"),
+            password: data.get("password")
+          })
+        });
+        authForm.reset();
+        showTasks(result.user);
+      } catch (error) {
+        authMessage.textContent = error.message;
+      }
+    });
+
+    function showTasks(user) {
+      authScreen.hidden = true;
+      taskScreen.hidden = false;
+      document.querySelector("#welcome").textContent = `أهلاً ${user.username}`;
+      loadTasks();
+    }
+
+    document.querySelector("#logout").addEventListener("click", async () => {
+      try {
+        await request("/api/auth/logout", { method: "POST" });
+        taskScreen.hidden = true;
+        authScreen.hidden = false;
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
+    });
 
     async function loadTasks() {
       try {
-        const response = await fetch("/api/tasks");
-        if (!response.ok) throw new Error("تعذر جلب المهام");
-        const tasks = await response.json();
+        const tasks = await request("/api/tasks");
         list.replaceChildren();
         countText.textContent = `${tasks.length} مهمة`;
 
-        tasks.forEach(task => {
+        for (const task of tasks) {
           const item = document.createElement("li");
           if (task.completed) item.classList.add("done");
 
@@ -117,7 +178,7 @@
 
           item.append(checkbox, info, remove);
           list.append(item);
-        });
+        }
 
         statusText.textContent = tasks.length ? "" : "ماكو مهام حالياً. أضف أول مهمة.";
       } catch (error) {
@@ -125,20 +186,18 @@
       }
     }
 
-    form.addEventListener("submit", async event => {
+    taskForm.addEventListener("submit", async event => {
       event.preventDefault();
-      const data = new FormData(form);
+      const data = new FormData(taskForm);
       try {
-        const response = await fetch("/api/tasks", {
+        await request("/api/tasks", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: data.get("title"),
             description: data.get("description")
           })
         });
-        if (!response.ok) throw new Error("ما انضافت المهمة");
-        form.reset();
+        taskForm.reset();
         await loadTasks();
       } catch (error) {
         statusText.textContent = error.message;
@@ -146,25 +205,29 @@
     });
 
     async function updateTask(task, completed) {
-      const response = await fetch(`/api/tasks/${task.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...task, completed })
-      });
-      if (!response.ok) statusText.textContent = "ما تحدّثت المهمة";
-      await loadTasks();
+      try {
+        await request(`/api/tasks/${task.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ ...task, completed })
+        });
+        await loadTasks();
+      } catch (error) {
+        statusText.textContent = error.message;
+      }
     }
 
     async function deleteTask(id) {
-      const response = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-      if (!response.ok) {
-        statusText.textContent = "ما انحذفت المهمة";
-        return;
+      try {
+        await request(`/api/tasks/${id}`, { method: "DELETE" });
+        await loadTasks();
+      } catch (error) {
+        statusText.textContent = error.message;
       }
-      await loadTasks();
     }
 
-    loadTasks();
+    request("/api/auth/me")
+      .then(result => result.user ? showTasks(result.user) : null)
+      .catch(() => {});
   </script>
 </body>
 </html>
